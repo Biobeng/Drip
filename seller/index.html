@@ -1,447 +1,1201 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Drip — Pay-per-call intelligence on Arc</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --paper:#FAF7F0; --paper-dim:#F1ECE0; --ink:#211E1A; --ink-soft:#4A453D;
-  --gray:#8A8478; --hair:#DDD6C8; --stamp:#B23A2E; --stamp-dim:#E8C9C4;
-  --ok:#3E6B4F; --ok-dim:#DCE8DF;
-  --display:'Fraunces',serif; --mono:'IBM Plex Mono',monospace; --body:'Inter',sans-serif;
-}
-body{background:var(--paper);color:var(--ink);font-family:var(--body);min-height:100vh}
-
-/* ── Header ── */
-.header{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1.5px solid var(--ink)}
-.logo{display:flex;align-items:baseline;gap:10px;font-family:var(--display);font-size:26px;font-weight:600;letter-spacing:-0.5px}
-.logo .mark{font-size:15px;color:var(--stamp);font-style:italic;font-weight:500}
-.header-right{display:flex;align-items:center;gap:14px}
-.net-tag{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);border:1px solid var(--hair);padding:5px 11px;border-radius:2px;letter-spacing:0.04em}
-.net-tag .pulse{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--ok);margin-right:6px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
-.btn{padding:9px 18px;border-radius:2px;font-family:var(--mono);font-size:12px;font-weight:500;border:1.5px solid var(--ink);cursor:pointer;transition:all .12s;background:transparent;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;letter-spacing:0.02em}
-.btn:hover{background:var(--ink);color:var(--paper)}
-.btn-stamp{background:var(--ink);color:var(--paper)}
-.btn-stamp:hover{background:var(--stamp);border-color:var(--stamp)}
-.btn:disabled{opacity:.35;cursor:not-allowed;background:transparent;color:var(--ink)}
-
-/* ── Hero ── */
-.hero{max-width:1120px;margin:0 auto;padding:56px 48px 36px;text-align:center}
-.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.18em;color:var(--stamp);text-transform:uppercase;margin-bottom:18px}
-.hero h1{font-family:var(--display);font-size:clamp(36px,6vw,64px);font-weight:600;line-height:1.02;letter-spacing:-1.5px;margin-bottom:16px}
-.hero h1 em{font-style:italic;color:var(--stamp);font-weight:500}
-.hero p{font-size:16px;color:var(--ink-soft);max-width:520px;margin:0 auto 30px;font-weight:400;line-height:1.65}
-
-.hero-prompt{max-width:600px;margin:0 auto 14px}
-
-.pricing-picker{max-width:600px;margin:0 auto 18px}
-.pricing-mode-row{display:flex;gap:0;border:1px solid var(--hair);border-radius:2px;overflow:hidden;margin-bottom:10px}
-.mode-btn{flex:1;padding:9px 12px;background:#fff;border:none;font-family:var(--mono);font-size:11px;color:var(--gray);cursor:pointer;transition:all .12s;letter-spacing:0.02em}
-.mode-btn+.mode-btn{border-left:1px solid var(--hair)}
-.mode-btn.active{background:var(--ink);color:var(--paper)}
-.mode-btn:hover:not(.active){background:var(--paper-dim);color:var(--ink)}
-.tier-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.tier-btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;background:#fff;border:1px solid var(--hair);border-radius:2px;cursor:pointer;transition:all .12s;text-align:left}
-.tier-btn:hover{border-color:var(--ink-soft)}
-.tier-btn.active{border-color:var(--stamp);background:var(--stamp-dim)}
-.tier-price{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
-.tier-btn.active .tier-price{color:var(--stamp)}
-.tier-label{font-size:10.5px;color:var(--gray)}
-.auto-note{font-size:12px;color:var(--ink-soft);line-height:1.6;padding:10px 12px;background:#fff;border:1px dashed var(--hair);border-radius:2px}
-.msg-tier{font-family:var(--mono);font-size:9px;color:var(--gray);border:1px solid var(--hair);padding:1px 6px;border-radius:8px;text-transform:uppercase;letter-spacing:0.04em}
-.prompt-row{display:flex;gap:0;border:1.5px solid var(--ink);border-radius:2px;overflow:hidden;background:#fff}
-.prompt-field{flex:1;padding:14px 16px;border:none;background:transparent;color:var(--ink);font-family:var(--body);font-size:14px;outline:none}
-.prompt-field::placeholder{color:var(--gray)}
-.prompt-hint{font-family:var(--mono);font-size:10.5px;color:var(--gray);margin-top:8px;letter-spacing:0.02em}
-.run-btn{padding:14px 26px;font-size:12.5px;white-space:nowrap;border:none;border-left:1.5px solid var(--ink)}
-
-/* ── Ledger stats strip ── */
-.ledger{max-width:1120px;margin:0 auto 32px;padding:0 48px}
-.ledger-strip{border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);display:grid;grid-template-columns:repeat(4,1fr)}
-.ledger-cell{padding:20px 20px;text-align:left;border-left:1px solid var(--hair)}
-.ledger-cell:first-child{border-left:none}
-.ledger-num{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--ink);margin-bottom:3px}
-.ledger-num.stamp{color:var(--stamp)}
-.ledger-lbl{font-family:var(--mono);font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:0.08em}
-
-/* ── Layout ── */
-.layout{max-width:1120px;margin:0 auto;padding:0 48px 80px;display:grid;grid-template-columns:220px 1fr 320px;gap:0}
-
-/* Sidebar - chat history */
-.sidebar{border-right:1px solid var(--hair);padding-right:22px}
-.sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.sidebar-title{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;color:var(--gray);text-transform:uppercase}
-.new-chat-btn{font-family:var(--mono);font-size:11px;color:var(--stamp);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
-.chat-list{display:flex;flex-direction:column;gap:2px}
-.chat-item{display:block;width:100%;text-align:left;padding:10px 10px;border:none;background:transparent;cursor:pointer;border-radius:2px;transition:background .1s}
-.chat-item:hover{background:var(--paper-dim)}
-.chat-item.active{background:var(--paper-dim);border-left:2px solid var(--stamp);padding-left:8px}
-.chat-item-title{font-size:12.5px;color:var(--ink);font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chat-item-meta{font-family:var(--mono);font-size:10px;color:var(--gray)}
-.sidebar-empty{font-size:12px;color:var(--gray);line-height:1.6;padding:10px 0}
-
-/* Center - conversation */
-.center{padding:0 28px;min-width:0}
-.section-lbl{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--gray);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
-.conversation{display:flex;flex-direction:column;gap:18px;margin-bottom:32px}
-.conv-empty{text-align:center;padding:56px 20px;color:var(--gray);font-size:13px;line-height:1.7;border:1px dashed var(--hair);border-radius:2px}
-.msg{max-width:100%}
-.msg-user{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
-.msg-user-label{font-family:var(--mono);font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:0.06em}
-.msg-user-text{font-size:14px;font-weight:500;color:var(--ink)}
-.msg-amount{font-family:var(--mono);font-size:10px;color:var(--stamp);margin-left:auto;white-space:nowrap}
-.msg-assistant{background:#fff;border:1px solid var(--hair);border-radius:2px;padding:18px 20px;font-size:14.5px;line-height:1.75;color:var(--ink);white-space:pre-wrap}
-.msg-assistant::before{content:"";display:block;width:24px;height:2px;background:var(--stamp);margin-bottom:12px}
-
-/* Receipt divider between wallets */
-.receipt-tape{border-top:1px dashed var(--hair);margin:24px 0;position:relative;height:1px}
-
-/* Explainer card */
-.info-card{border:1px solid var(--hair);border-radius:2px;padding:16px 18px;margin-bottom:24px;background:var(--paper-dim)}
-.info-card p{font-size:12.5px;color:var(--ink-soft);line-height:1.7}
-.info-card strong{font-family:var(--display);font-size:13.5px;color:var(--ink);display:block;margin-bottom:5px;font-weight:600}
-
-/* Right - wallet + feed */
-.right-col{padding-left:24px;border-left:1px solid var(--hair)}
-.wallet-block{margin-bottom:28px}
-.wallet-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--hair)}
-.wallet-row:last-child{border-bottom:none}
-.wallet-role{font-family:var(--mono);font-size:10.5px;color:var(--gray)}
-.wallet-addr{font-family:var(--mono);font-size:11px;color:var(--ink)}
-.wallet-addr.stamp{color:var(--stamp)}
-
-.feed-list{display:flex;flex-direction:column}
-.feed-item{padding:12px 0;border-bottom:1px dashed var(--hair);position:relative}
-.feed-item:last-child{border-bottom:none}
-.feed-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-.feed-action{font-size:12px;color:var(--ink);font-weight:500;line-height:1.4}
-.feed-stamp{font-family:var(--mono);font-size:9px;letter-spacing:0.08em;color:var(--ok);border:1px solid var(--ok-dim);padding:2px 6px;transform:rotate(-2deg);white-space:nowrap}
-.feed-stamp.error{color:var(--stamp);border-color:var(--stamp-dim)}
-.feed-meta{font-family:var(--mono);font-size:10px;color:var(--gray)}
-.feed-amt{font-family:var(--mono);font-size:11px;color:var(--stamp);font-weight:600}
-.feed-empty{font-size:12px;color:var(--gray);line-height:1.7}
-
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:2px;font-family:var(--mono);font-size:12px;z-index:300;max-width:300px;border:1.5px solid;background:#fff;animation:slideUp .25s ease}
-.toast.success{border-color:var(--ok);color:var(--ok)}
-.toast.error{border-color:var(--stamp);color:var(--stamp)}
-@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
-
-footer{border-top:1.5px solid var(--ink);padding:22px 48px;display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:0 auto}
-footer p{font-size:11px;color:var(--gray);font-family:var(--mono)}
-footer a{font-size:11px;color:var(--ink);font-family:var(--mono);text-decoration:none;border-bottom:1px solid var(--hair)}
-footer a:hover{border-color:var(--ink)}
-
-@media(max-width:900px){
-  .layout{grid-template-columns:1fr}
-  .sidebar{border-right:none;border-bottom:1px solid var(--hair);padding:0 0 20px;margin-bottom:20px}
-  .center{padding:0}
-  .right-col{border-left:none;padding-left:0;border-top:1px solid var(--hair);padding-top:20px;margin-top:20px}
-}
-@media(max-width:640px){
-  .header{padding:14px 20px}
-  .hero{padding:36px 20px 24px}
-  .ledger{padding:0 20px}
-  .ledger-strip{grid-template-columns:repeat(2,1fr)}
-  .ledger-cell:nth-child(3){border-left:none}
-  .layout{padding:0 20px 60px}
-  footer{flex-direction:column;gap:8px;padding:18px 20px}
-  .prompt-row{flex-direction:column}
-  .run-btn{border-left:none;border-top:1.5px solid var(--ink)}
-}
-</style>
-</head>
-<body>
-<div id="root"></div>
-<script>
-const {useState,useEffect,useCallback,useRef}=React;
-const USDC="0x3600000000000000000000000000000000000000";
-const SID_KEY="drip_session_id";
-const TIER_LABELS={quick:"Quick",detailed:"Detailed",longform:"Long-form"};
-
-async function rpcCall(method,params){
-  const r=await fetch("/rpc",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method,params})});
-  const d=await r.json();
-  if(d.error) throw new Error(d.error.message);
-  return d.result;
-}
-function shortAddr(a){return a?a.slice(0,8)+"…"+a.slice(-6):""}
-function timeAgo(iso){
-  const diff=Math.floor((Date.now()-new Date(iso).getTime())/1000);
-  if(diff<5) return "just now";
-  if(diff<60) return diff+"s ago";
-  if(diff<3600) return Math.floor(diff/60)+"m ago";
-  return Math.floor(diff/3600)+"h ago";
-}
-
-function App(){
-  const [status,setStatus]=useState(null);
-  const [feed,setFeed]=useState([]);
-  const [chats,setChats]=useState([]);
-  const [activeChat,setActiveChat]=useState(null);
-  const [messages,setMessages]=useState([]);
-  const [running,setRunning]=useState(false);
-  const [toast,setToast]=useState(null);
-  const [inputVal,setInputVal]=useState("");
-  const [pricingMode,setPricingMode]=useState("manual"); // "manual" = Option A, "auto" = Option B
-  const [selectedTier,setSelectedTier]=useState("quick");
-  const toastTimer=useRef(null);
-  const pollTimer=useRef(null);
-  const convEndRef=useRef(null);
-
-  const showToast=useCallback((msg,type="success")=>{
-    setToast({msg,type});
-    clearTimeout(toastTimer.current);
-    toastTimer.current=setTimeout(()=>setToast(null),4000);
-  },[]);
-
-  const loadStatus=useCallback(async()=>{
-    try{ const r=await fetch("/api/agent/status"); setStatus(await r.json()); }catch(e){}
-  },[]);
-
-  const loadFeed=useCallback(async()=>{
-    try{ const r=await fetch("/api/agent/feed"); const d=await r.json(); setFeed(d.feed||[]); }catch(e){}
-  },[]);
-
-  const loadChats=useCallback(async()=>{
-    try{ const r=await fetch("/api/chats"); const d=await r.json(); setChats(d.chats||[]); }catch(e){}
-  },[]);
-
-  const openChat=useCallback(async(id)=>{
-    try{
-      const r=await fetch(`/api/chats/${id}`);
-      if(!r.ok){ setActiveChat(null); setMessages([]); return; }
-      const d=await r.json();
-      setActiveChat(id);
-      setMessages(d.messages||[]);
-      localStorage.setItem(SID_KEY,id);
-    }catch(e){}
-  },[]);
-
-  function startNewChat(){
-    setActiveChat(null);
-    setMessages([]);
-    localStorage.removeItem(SID_KEY);
-  }
-
-  useEffect(()=>{
-    loadStatus(); loadFeed(); loadChats();
-    const saved=localStorage.getItem(SID_KEY);
-    if(saved) openChat(saved);
-    pollTimer.current=setInterval(()=>{loadStatus();loadFeed();},5000);
-    return ()=>clearInterval(pollTimer.current);
-  },[]);
-
-  useEffect(()=>{
-    if(convEndRef.current) convEndRef.current.scrollIntoView({behavior:"smooth",block:"end"});
-  },[messages]);
-
-  async function runAgent(){
-    const prompt=inputVal.trim();
-    setRunning(true);
-    try{
-      const r=await fetch("/api/agent/run",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ prompt, sessionId: activeChat, pricingMode, tier: selectedTier })
-      });
-      const d=await r.json();
-      if(!r.ok){
-        showToast(d.error||"Payment failed.","error");
-      }else{
-        setActiveChat(d.sessionId);
-        localStorage.setItem(SID_KEY,d.sessionId);
-        setMessages(m=>[...m,
-          {role:"user",content:d.prompt,timestamp:new Date().toISOString(),amount:d.price,tier:d.tier},
-          {role:"assistant",content:d.result,timestamp:new Date().toISOString()}
-        ]);
-        setInputVal("");
-        await loadStatus(); await loadFeed(); await loadChats();
-        showToast(`Settled ${d.price} via Circle Gateway (${d.tier})`,"success");
-      }
-    }catch(e){
-      showToast("Request failed: "+e.message,"error");
-    }finally{
-      setRunning(false);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drip — Pay-per-call intelligence on Arc</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
     }
-  }
 
-  return React.createElement(React.Fragment,null,
+    :root {
+      --paper: #FAF7F0;
+      --paper-dim: #F1ECE0;
+      --ink: #211E1A;
+      --ink-soft: #4A453D;
+      --gray: #8A8478;
+      --hair: #DDD6C8;
+      --stamp: #B23A2E;
+      --stamp-dim: #E8C9C4;
+      --ok: #3E6B4F;
+      --ok-dim: #DCE8DF;
+      --display: 'Fraunces', serif;
+      --mono: 'IBM Plex Mono', monospace;
+      --body: 'Inter', sans-serif;
+    }
 
-    React.createElement("header",{className:"header"},
-      React.createElement("div",{className:"logo"},"Drip",React.createElement("span",{className:"mark"},"pay per call")),
-      React.createElement("div",{className:"header-right"},
-        React.createElement("span",{className:"net-tag"},React.createElement("span",{className:"pulse"}),"Arc Testnet"),
-        React.createElement("a",{href:"https://github.com/Biobeng/Drip",target:"_blank",className:"btn"},"Source")
-      )
-    ),
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--body);
+      min-height: 100vh
+    }
 
-    React.createElement("section",{className:"hero"},
-      React.createElement("p",{className:"eyebrow"},"Circle Gateway Nanopayments · Live Agent"),
-      React.createElement("h1",null,"An agent that ",React.createElement("em",null,"pays"),React.createElement("br"),"for its own thinking."),
-      React.createElement("p",null,"Every message below is a real Circle Gateway payment settling on Arc, zero gas, before Gemini answers. Price reflects the value of what you're asking for."),
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1.5px solid var(--ink)
+    }
 
-      React.createElement("div",{className:"pricing-picker"},
-        React.createElement("div",{className:"pricing-mode-row"},
-          React.createElement("button",{
-            className:`mode-btn${pricingMode==="manual"?" active":""}`,
-            onClick:()=>setPricingMode("manual")
-          },"I'll choose the price"),
-          React.createElement("button",{
-            className:`mode-btn${pricingMode==="auto"?" active":""}`,
-            onClick:()=>setPricingMode("auto")
-          },"Let the agent decide")
-        ),
-        pricingMode==="manual" && React.createElement("div",{className:"tier-row"},
-          [
-            {key:"quick",price:"$0.001",label:"Quick answer"},
-            {key:"detailed",price:"$0.005",label:"Detailed explanation"},
-            {key:"longform",price:"$0.02",label:"Long-form content"},
-          ].map(t=>React.createElement("button",{
-            key:t.key,
-            className:`tier-btn${selectedTier===t.key?" active":""}`,
-            onClick:()=>setSelectedTier(t.key)
-          },
-            React.createElement("span",{className:"tier-price"},t.price),
-            React.createElement("span",{className:"tier-label"},t.label)
-          ))
-        ),
-        pricingMode==="auto" && React.createElement("div",{className:"auto-note"},
-          "The agent reads your prompt and classifies it as quick ($0.001), detailed ($0.005), or long-form ($0.02) before paying, entirely on its own."
-        )
-      ),
+    .logo {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-family: var(--display);
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.5px
+    }
 
-      React.createElement("div",{className:"hero-prompt"},
-        React.createElement("div",{className:"prompt-row"},
-          React.createElement("input",{
-            className:"prompt-field",type:"text",
-            placeholder:"Write a 200-word explainer on nanopayments, or ask anything...",
-            value:inputVal,
-            onChange:e=>setInputVal(e.target.value),
-            onKeyDown:e=>{ if(e.key==="Enter" && !running) runAgent(); }
-          }),
-          React.createElement("button",{className:"btn btn-stamp run-btn",onClick:runAgent,disabled:running||(status&&status.is_running)},
-            running
-              ? (pricingMode==="auto" ? "Classifying & settling…" : "Settling…")
-              : (pricingMode==="auto" ? "Let agent decide & ask" : `Pay ${ {quick:"$0.001",detailed:"$0.005",longform:"$0.02"}[selectedTier] } & Ask`)
+    .logo .mark {
+      font-size: 15px;
+      color: var(--stamp);
+      font-style: italic;
+      font-weight: 500
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .net-tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--ink-soft);
+      border: 1px solid var(--hair);
+      padding: 5px 11px;
+      border-radius: 2px;
+      letter-spacing: 0.04em
+    }
+
+    .net-tag .pulse {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--ok);
+      margin-right: 6px;
+      animation: pulse 2s infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.25
+      }
+    }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1.5px solid var(--ink);
+      cursor: pointer;
+      transition: all .12s;
+      background: transparent;
+      color: var(--ink);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      letter-spacing: 0.02em
+    }
+
+    .btn:hover {
+      background: var(--ink);
+      color: var(--paper)
+    }
+
+    .btn-stamp {
+      background: var(--ink);
+      color: var(--paper)
+    }
+
+    .btn-stamp:hover {
+      background: var(--stamp);
+      border-color: var(--stamp)
+    }
+
+    .btn:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+      background: transparent;
+      color: var(--ink)
+    }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 56px 48px 36px;
+      text-align: center
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--stamp);
+      text-transform: uppercase;
+      margin-bottom: 18px
+    }
+
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 600;
+      line-height: 1.02;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--stamp);
+      font-weight: 500
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--ink-soft);
+      max-width: 520px;
+      margin: 0 auto 30px;
+      font-weight: 400;
+      line-height: 1.65
+    }
+
+    .hero-prompt {
+      max-width: 600px;
+      margin: 0 auto 14px
+    }
+
+    .pricing-picker {
+      max-width: 600px;
+      margin: 0 auto 18px
+    }
+
+    .pricing-mode-row {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--hair);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 10px
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 9px 12px;
+      background: #fff;
+      border: none;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--gray);
+      cursor: pointer;
+      transition: all .12s;
+      letter-spacing: 0.02em
+    }
+
+    .mode-btn+.mode-btn {
+      border-left: 1px solid var(--hair)
+    }
+
+    .mode-btn.active {
+      background: var(--ink);
+      color: var(--paper)
+    }
+
+    .mode-btn:hover:not(.active) {
+      background: var(--paper-dim);
+      color: var(--ink)
+    }
+
+    .tier-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px
+    }
+
+    .tier-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--hair);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all .12s;
+      text-align: left
+    }
+
+    .tier-btn:hover {
+      border-color: var(--ink-soft)
+    }
+
+    .tier-btn.active {
+      border-color: var(--stamp);
+      background: var(--stamp-dim)
+    }
+
+    .tier-price {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink)
+    }
+
+    .tier-btn.active .tier-price {
+      color: var(--stamp)
+    }
+
+    .tier-label {
+      font-size: 10.5px;
+      color: var(--gray)
+    }
+
+    .auto-note {
+      font-size: 12px;
+      color: var(--ink-soft);
+      line-height: 1.6;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px dashed var(--hair);
+      border-radius: 2px
+    }
+
+    .msg-tier {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--gray);
+      border: 1px solid var(--hair);
+      padding: 1px 6px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em
+    }
+
+    .spend-bar-block {
+      margin-bottom: 18px
+    }
+
+    .spend-bar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px
+    }
+
+    .spend-bar-label {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--ink-soft)
+    }
+
+    .receipt-link {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--stamp);
+      text-decoration: none;
+      border-bottom: 1px solid var(--stamp-dim)
+    }
+
+    .receipt-link:hover {
+      border-color: var(--stamp)
+    }
+
+    .spend-bar-track {
+      height: 5px;
+      background: var(--paper-dim);
+      border: 1px solid var(--hair);
+      border-radius: 3px;
+      overflow: hidden
+    }
+
+    .spend-bar-fill {
+      height: 100%;
+      background: var(--ok);
+      transition: width .3s ease
+    }
+
+    .spend-bar-fill.warn {
+      background: var(--stamp)
+    }
+
+    .prompt-row {
+      display: flex;
+      gap: 0;
+      border: 1.5px solid var(--ink);
+      border-radius: 2px;
+      overflow: hidden;
+      background: #fff
+    }
+
+    .prompt-field {
+      flex: 1;
+      padding: 14px 16px;
+      border: none;
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--body);
+      font-size: 14px;
+      outline: none
+    }
+
+    .prompt-field::placeholder {
+      color: var(--gray)
+    }
+
+    .prompt-hint {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--gray);
+      margin-top: 8px;
+      letter-spacing: 0.02em
+    }
+
+    .run-btn {
+      padding: 14px 26px;
+      font-size: 12.5px;
+      white-space: nowrap;
+      border: none;
+      border-left: 1.5px solid var(--ink)
+    }
+
+    /* ── Ledger stats strip ── */
+    .ledger {
+      max-width: 1120px;
+      margin: 0 auto 32px;
+      padding: 0 48px
+    }
+
+    .ledger-strip {
+      border-top: 1.5px solid var(--ink);
+      border-bottom: 1.5px solid var(--ink);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr)
+    }
+
+    .ledger-cell {
+      padding: 20px 20px;
+      text-align: left;
+      border-left: 1px solid var(--hair)
+    }
+
+    .ledger-cell:first-child {
+      border-left: none
+    }
+
+    .ledger-num {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 3px
+    }
+
+    .ledger-num.stamp {
+      color: var(--stamp)
+    }
+
+    .ledger-lbl {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.08em
+    }
+
+    /* ── Layout ── */
+    .layout {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 48px 80px;
+      display: grid;
+      grid-template-columns: 220px 1fr 320px;
+      gap: 0
+    }
+
+    /* Sidebar - chat history */
+    .sidebar {
+      border-right: 1px solid var(--hair);
+      padding-right: 22px
+    }
+
+    .sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px
+    }
+
+    .sidebar-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--gray);
+      text-transform: uppercase
+    }
+
+    .new-chat-btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--stamp);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px
+    }
+
+    .chat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px
+    }
+
+    .chat-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 10px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: background .1s
+    }
+
+    .chat-item:hover {
+      background: var(--paper-dim)
+    }
+
+    .chat-item.active {
+      background: var(--paper-dim);
+      border-left: 2px solid var(--stamp);
+      padding-left: 8px
+    }
+
+    .chat-item-title {
+      font-size: 12.5px;
+      color: var(--ink);
+      font-weight: 500;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .chat-item-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--gray)
+    }
+
+    .sidebar-empty {
+      font-size: 12px;
+      color: var(--gray);
+      line-height: 1.6;
+      padding: 10px 0
+    }
+
+    /* Center - conversation */
+    .center {
+      padding: 0 28px;
+      min-width: 0
+    }
+
+    .section-lbl {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .conversation {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 32px
+    }
+
+    .conv-empty {
+      text-align: center;
+      padding: 56px 20px;
+      color: var(--gray);
+      font-size: 13px;
+      line-height: 1.7;
+      border: 1px dashed var(--hair);
+      border-radius: 2px
+    }
+
+    .msg {
+      max-width: 100%
+    }
+
+    .msg-user {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px
+    }
+
+    .msg-user-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.06em
+    }
+
+    .msg-user-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink)
+    }
+
+    .msg-amount {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--stamp);
+      margin-left: auto;
+      white-space: nowrap
+    }
+
+    .msg-assistant {
+      background: #fff;
+      border: 1px solid var(--hair);
+      border-radius: 2px;
+      padding: 18px 20px;
+      font-size: 14.5px;
+      line-height: 1.75;
+      color: var(--ink);
+      white-space: pre-wrap
+    }
+
+    .msg-assistant::before {
+      content: "";
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--stamp);
+      margin-bottom: 12px
+    }
+
+    /* Receipt divider between wallets */
+    .receipt-tape {
+      border-top: 1px dashed var(--hair);
+      margin: 24px 0;
+      position: relative;
+      height: 1px
+    }
+
+    /* Explainer card */
+    .info-card {
+      border: 1px solid var(--hair);
+      border-radius: 2px;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+      background: var(--paper-dim)
+    }
+
+    .info-card p {
+      font-size: 12.5px;
+      color: var(--ink-soft);
+      line-height: 1.7
+    }
+
+    .info-card strong {
+      font-family: var(--display);
+      font-size: 13.5px;
+      color: var(--ink);
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600
+    }
+
+    /* Right - wallet + feed */
+    .right-col {
+      padding-left: 24px;
+      border-left: 1px solid var(--hair)
+    }
+
+    .wallet-block {
+      margin-bottom: 28px
+    }
+
+    .wallet-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--hair)
+    }
+
+    .wallet-row:last-child {
+      border-bottom: none
+    }
+
+    .wallet-role {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--gray)
+    }
+
+    .wallet-addr {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink)
+    }
+
+    .wallet-addr.stamp {
+      color: var(--stamp)
+    }
+
+    .feed-list {
+      display: flex;
+      flex-direction: column
+    }
+
+    .feed-item {
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--hair);
+      position: relative
+    }
+
+    .feed-item:last-child {
+      border-bottom: none
+    }
+
+    .feed-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px
+    }
+
+    .feed-action {
+      font-size: 12px;
+      color: var(--ink);
+      font-weight: 500;
+      line-height: 1.4
+    }
+
+    .feed-stamp {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--ok);
+      border: 1px solid var(--ok-dim);
+      padding: 2px 6px;
+      transform: rotate(-2deg);
+      white-space: nowrap
+    }
+
+    .feed-stamp.error {
+      color: var(--stamp);
+      border-color: var(--stamp-dim)
+    }
+
+    .feed-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--gray)
+    }
+
+    .feed-amt {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--stamp);
+      font-weight: 600
+    }
+
+    .feed-empty {
+      font-size: 12px;
+      color: var(--gray);
+      line-height: 1.7
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 18px;
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 12px;
+      z-index: 300;
+      max-width: 300px;
+      border: 1.5px solid;
+      background: #fff;
+      animation: slideUp .25s ease
+    }
+
+    .toast.success {
+      border-color: var(--ok);
+      color: var(--ok)
+    }
+
+    .toast.error {
+      border-color: var(--stamp);
+      color: var(--stamp)
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(16px);
+        opacity: 0
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    footer {
+      border-top: 1.5px solid var(--ink);
+      padding: 22px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1120px;
+      margin: 0 auto
+    }
+
+    footer p {
+      font-size: 11px;
+      color: var(--gray);
+      font-family: var(--mono)
+    }
+
+    footer a {
+      font-size: 11px;
+      color: var(--ink);
+      font-family: var(--mono);
+      text-decoration: none;
+      border-bottom: 1px solid var(--hair)
+    }
+
+    footer a:hover {
+      border-color: var(--ink)
+    }
+
+    @media(max-width:900px) {
+      .layout {
+        grid-template-columns: 1fr
+      }
+
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--hair);
+        padding: 0 0 20px;
+        margin-bottom: 20px
+      }
+
+      .center {
+        padding: 0
+      }
+
+      .right-col {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid var(--hair);
+        padding-top: 20px;
+        margin-top: 20px
+      }
+    }
+
+    @media(max-width:640px) {
+      .header {
+        padding: 14px 20px
+      }
+
+      .hero {
+        padding: 36px 20px 24px
+      }
+
+      .ledger {
+        padding: 0 20px
+      }
+
+      .ledger-strip {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .ledger-cell:nth-child(3) {
+        border-left: none
+      }
+
+      .layout {
+        padding: 0 20px 60px
+      }
+
+      footer {
+        flex-direction: column;
+        gap: 8px;
+        padding: 18px 20px
+      }
+
+      .prompt-row {
+        flex-direction: column
+      }
+
+      .run-btn {
+        border-left: none;
+        border-top: 1.5px solid var(--ink)
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>
+    const { useState, useEffect, useCallback, useRef } = React;
+    const USDC = "0x3600000000000000000000000000000000000000";
+    const SID_KEY = "drip_session_id";
+    const TIER_LABELS = { quick: "Quick", detailed: "Detailed", longform: "Long-form" };
+
+    async function rpcCall(method, params) {
+      const r = await fetch("/rpc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error.message);
+      return d.result;
+    }
+    function shortAddr(a) { return a ? a.slice(0, 8) + "…" + a.slice(-6) : "" }
+    function timeAgo(iso) {
+      const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (diff < 5) return "just now";
+      if (diff < 60) return diff + "s ago";
+      if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+      return Math.floor(diff / 3600) + "h ago";
+    }
+
+    function App() {
+      const [status, setStatus] = useState(null);
+      const [feed, setFeed] = useState([]);
+      const [chats, setChats] = useState([]);
+      const [activeChat, setActiveChat] = useState(null);
+      const [messages, setMessages] = useState([]);
+      const [running, setRunning] = useState(false);
+      const [toast, setToast] = useState(null);
+      const [inputVal, setInputVal] = useState("");
+      const [pricingMode, setPricingMode] = useState("manual"); // "manual" = Option A, "auto" = Option B
+      const [selectedTier, setSelectedTier] = useState("quick");
+      const [sessionSpent, setSessionSpent] = useState(0);
+      const [sessionLimit, setSessionLimit] = useState(1.00);
+      const toastTimer = useRef(null);
+      const pollTimer = useRef(null);
+      const convEndRef = useRef(null);
+
+      const showToast = useCallback((msg, type = "success") => {
+        setToast({ msg, type });
+        clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => setToast(null), 4000);
+      }, []);
+
+      const loadStatus = useCallback(async () => {
+        try { const r = await fetch("/api/agent/status"); setStatus(await r.json()); } catch (e) { }
+      }, []);
+
+      const loadFeed = useCallback(async () => {
+        try { const r = await fetch("/api/agent/feed"); const d = await r.json(); setFeed(d.feed || []); } catch (e) { }
+      }, []);
+
+      const loadChats = useCallback(async () => {
+        try { const r = await fetch("/api/chats"); const d = await r.json(); setChats(d.chats || []); } catch (e) { }
+      }, []);
+
+      const openChat = useCallback(async (id) => {
+        try {
+          const r = await fetch(`/api/chats/${id}`);
+          if (!r.ok) { setActiveChat(null); setMessages([]); return; }
+          const d = await r.json();
+          setActiveChat(id);
+          setMessages(d.messages || []);
+          setSessionSpent(parseFloat(d.spentTotal || 0));
+          setSessionLimit(parseFloat(d.spendLimit || 1.00));
+          localStorage.setItem(SID_KEY, id);
+        } catch (e) { }
+      }, []);
+
+      function startNewChat() {
+        setActiveChat(null);
+        setMessages([]);
+        setSessionSpent(0);
+        localStorage.removeItem(SID_KEY);
+      }
+
+      useEffect(() => {
+        loadStatus(); loadFeed(); loadChats();
+        const saved = localStorage.getItem(SID_KEY);
+        if (saved) openChat(saved);
+        pollTimer.current = setInterval(() => { loadStatus(); loadFeed(); }, 5000);
+        return () => clearInterval(pollTimer.current);
+      }, []);
+
+      useEffect(() => {
+        if (convEndRef.current) convEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, [messages]);
+
+      async function runAgent() {
+        const prompt = inputVal.trim();
+        setRunning(true);
+        try {
+          const r = await fetch("/api/agent/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, sessionId: activeChat, pricingMode, tier: selectedTier })
+          });
+          const d = await r.json();
+          if (r.status === 429) {
+            setSessionSpent(parseFloat(d.spentTotal || sessionSpent));
+            showToast(d.error || "Spend limit reached for this conversation.", "error");
+          } else if (!r.ok) {
+            showToast(d.error || "Payment failed.", "error");
+          } else {
+            setActiveChat(d.sessionId);
+            localStorage.setItem(SID_KEY, d.sessionId);
+            setMessages(m => [...m,
+            { role: "user", content: d.prompt, timestamp: new Date().toISOString(), amount: d.price, tier: d.tier, txHash: d.txHash },
+            { role: "assistant", content: d.result, timestamp: new Date().toISOString() }
+            ]);
+            setSessionSpent(parseFloat(d.sessionSpent || 0));
+            setSessionLimit(parseFloat(d.sessionLimit || 1.00));
+            setInputVal("");
+            await loadStatus(); await loadFeed(); await loadChats();
+            showToast(`Settled ${d.price} via Circle Gateway (${d.tier})`, "success");
+          }
+        } catch (e) {
+          showToast("Request failed: " + e.message, "error");
+        } finally {
+          setRunning(false);
+        }
+      }
+
+      return React.createElement(React.Fragment, null,
+
+        React.createElement("header", { className: "header" },
+          React.createElement("div", { className: "logo" }, "Drip", React.createElement("span", { className: "mark" }, "pay per call")),
+          React.createElement("div", { className: "header-right" },
+            React.createElement("span", { className: "net-tag" }, React.createElement("span", { className: "pulse" }), "Arc Testnet"),
+            React.createElement("a", { href: "https://github.com/Biobeng/Drip", target: "_blank", className: "btn" }, "Source")
           )
         ),
-        React.createElement("div",{className:"prompt-hint"},"Leave blank to try a sample question")
-      )
-    ),
 
-    React.createElement("div",{className:"ledger"},
-      React.createElement("div",{className:"ledger-strip"},
-        React.createElement("div",{className:"ledger-cell"},
-          React.createElement("div",{className:"ledger-num"},status?status.wallet_usdc:"—"),
-          React.createElement("div",{className:"ledger-lbl"},"Agent Wallet USDC")),
-        React.createElement("div",{className:"ledger-cell"},
-          React.createElement("div",{className:"ledger-num"},status?status.gateway_balance:"—"),
-          React.createElement("div",{className:"ledger-lbl"},"Gateway Balance")),
-        React.createElement("div",{className:"ledger-cell"},
-          React.createElement("div",{className:"ledger-num stamp"},status?status.total_calls:0),
-          React.createElement("div",{className:"ledger-lbl"},"Calls Settled")),
-        React.createElement("div",{className:"ledger-cell"},
-          React.createElement("div",{className:"ledger-num stamp"},"$"+(status?status.total_dripped:"0.000000")),
-          React.createElement("div",{className:"ledger-lbl"},"Total Dripped"))
-      )
-    ),
+        React.createElement("section", { className: "hero" },
+          React.createElement("p", { className: "eyebrow" }, "Circle Gateway Nanopayments · Live Agent"),
+          React.createElement("h1", null, "An agent that ", React.createElement("em", null, "pays"), React.createElement("br"), "for its own thinking."),
+          React.createElement("p", null, "Every message below is a real Circle Gateway payment settling on Arc, zero gas, before Drip answers. Price reflects the value of what you're asking for."),
 
-    React.createElement("div",{className:"layout"},
-
-      React.createElement("div",{className:"sidebar"},
-        React.createElement("div",{className:"sidebar-head"},
-          React.createElement("span",{className:"sidebar-title"},"Conversations"),
-          React.createElement("button",{className:"new-chat-btn",onClick:startNewChat},"+ New")
-        ),
-        chats.length===0
-          ? React.createElement("div",{className:"sidebar-empty"},"Your paid conversations will appear here.")
-          : React.createElement("div",{className:"chat-list"},
-              chats.map(c=>React.createElement("button",{
-                key:c.id,
-                className:`chat-item${activeChat===c.id?" active":""}`,
-                onClick:()=>openChat(c.id)
+          React.createElement("div", { className: "pricing-picker" },
+            React.createElement("div", { className: "pricing-mode-row" },
+              React.createElement("button", {
+                className: `mode-btn${pricingMode === "manual" ? " active" : ""}`,
+                onClick: () => setPricingMode("manual")
+              }, "I'll choose the price"),
+              React.createElement("button", {
+                className: `mode-btn${pricingMode === "auto" ? " active" : ""}`,
+                onClick: () => setPricingMode("auto")
+              }, "Let the agent decide")
+            ),
+            pricingMode === "manual" && React.createElement("div", { className: "tier-row" },
+              [
+                { key: "quick", price: "$0.001", label: "Quick answer" },
+                { key: "detailed", price: "$0.005", label: "Detailed explanation" },
+                { key: "longform", price: "$0.02", label: "Long-form content" },
+              ].map(t => React.createElement("button", {
+                key: t.key,
+                className: `tier-btn${selectedTier === t.key ? " active" : ""}`,
+                onClick: () => setSelectedTier(t.key)
               },
-                React.createElement("div",{className:"chat-item-title"},c.title),
-                React.createElement("div",{className:"chat-item-meta"},c.messageCount+" msgs · "+timeAgo(c.createdAt))
+                React.createElement("span", { className: "tier-price" }, t.price),
+                React.createElement("span", { className: "tier-label" }, t.label)
               ))
+            ),
+            pricingMode === "auto" && React.createElement("div", { className: "auto-note" },
+              "The agent reads your prompt and classifies it as quick ($0.001), detailed ($0.005), or long-form ($0.02) before paying, entirely on its own."
             )
-      ),
+          ),
 
-      React.createElement("div",{className:"center"},
-        React.createElement("div",{className:"section-lbl"},
-          React.createElement("span",null,activeChat?"Conversation":"New Conversation"),
-          messages.length>0 && React.createElement("span",null,messages.length+" messages")
-        ),
-        React.createElement("div",{className:"conversation"},
-          messages.length===0
-            ? React.createElement("div",{className:"conv-empty"},"No messages yet. Ask a question above, each one settles a real payment on Arc before Gemini responds.")
-            : messages.map((m,i)=>
-                m.role==="user"
-                  ? React.createElement("div",{className:"msg",key:i},
-                      React.createElement("div",{className:"msg-user"},
-                        React.createElement("span",{className:"msg-user-label"},"You paid"),
-                        m.tier && React.createElement("span",{className:"msg-tier"},TIER_LABELS[m.tier]||m.tier),
-                        React.createElement("span",{className:"msg-amount"},m.amount||"")
-                      ),
-                      React.createElement("div",{className:"msg-user-text"},m.content)
-                    )
-                  : React.createElement("div",{className:"msg-assistant",key:i},m.content)
+          React.createElement("div", { className: "hero-prompt" },
+            React.createElement("div", { className: "prompt-row" },
+              React.createElement("input", {
+                className: "prompt-field", type: "text",
+                placeholder: "Write a 200-word explainer on nanopayments, or ask anything...",
+                value: inputVal,
+                onChange: e => setInputVal(e.target.value),
+                onKeyDown: e => { if (e.key === "Enter" && !running) runAgent(); }
+              }),
+              React.createElement("button", { className: "btn btn-stamp run-btn", onClick: runAgent, disabled: running || (status && status.is_running) },
+                running
+                  ? (pricingMode === "auto" ? "Classifying & settling…" : "Settling…")
+                  : (pricingMode === "auto" ? "Let agent decide & ask" : `Pay ${{ quick: "$0.001", detailed: "$0.005", longform: "$0.02" }[selectedTier]} & Ask`)
               )
-        ),
-        React.createElement("div",{ref:convEndRef}),
-
-        React.createElement("div",{className:"info-card"},
-          React.createElement("strong",null,"How this works"),
-          React.createElement("p",null,"Every question triggers a full x402 cycle: the seller returns HTTP 402, the agent signs an EIP-3009 authorization offchain, Circle Gateway verifies and settles on Arc, then Gemini answers. Follow-ups in this conversation get prior context but are still billed individually.")
-        )
-      ),
-
-      React.createElement("div",{className:"right-col"},
-        React.createElement("div",{className:"wallet-block"},
-          React.createElement("div",{className:"section-lbl"},"Wallets"),
-          React.createElement("div",{className:"wallet-row"},
-            React.createElement("span",{className:"wallet-role"},"Buyer agent"),
-            React.createElement("span",{className:"wallet-addr"},status?shortAddr(status.agent_wallet):"—")),
-          React.createElement("div",{className:"wallet-row"},
-            React.createElement("span",{className:"wallet-role"},"Seller (Circle)"),
-            React.createElement("span",{className:"wallet-addr stamp"},status?shortAddr(status.seller_wallet):"—"))
-        ),
-
-        React.createElement("div",null,
-          React.createElement("div",{className:"section-lbl"},"Live Feed"),
-          React.createElement("div",{className:"feed-list"},
-            feed.length===0
-              ? React.createElement("div",{className:"feed-empty"},"Payment activity will stream here as the agent works.")
-              : feed.map(item=>React.createElement("div",{className:"feed-item",key:item.id},
-                  React.createElement("div",{className:"feed-top"},
-                    React.createElement("span",{className:"feed-action"},item.action),
-                  ),
-                  React.createElement("div",{className:"feed-top"},
-                    React.createElement("span",{className:"feed-meta"},timeAgo(item.timestamp)),
-                    React.createElement("span",{className:`feed-stamp${item.status==="error"?" error":""}`},item.status==="error"?"FAILED":"PAID")
-                  )
-                ))
+            ),
+            React.createElement("div", { className: "prompt-hint" }, "Leave blank to try a sample question")
           )
-        )
-      )
-    ),
+        ),
 
-    React.createElement("footer",null,
-      React.createElement("p",null,"Drip · Autonomous Nanopayments on Arc Testnet · Circle Gateway"),
-      React.createElement("a",{href:"https://github.com/Biobeng/Drip",target:"_blank"},"github.com/Biobeng/Drip")
-    ),
+        React.createElement("div", { className: "ledger" },
+          React.createElement("div", { className: "ledger-strip" },
+            React.createElement("div", { className: "ledger-cell" },
+              React.createElement("div", { className: "ledger-num" }, status ? status.wallet_usdc : "—"),
+              React.createElement("div", { className: "ledger-lbl" }, "Agent Wallet USDC")),
+            React.createElement("div", { className: "ledger-cell" },
+              React.createElement("div", { className: "ledger-num" }, status ? status.gateway_balance : "—"),
+              React.createElement("div", { className: "ledger-lbl" }, "Gateway Balance")),
+            React.createElement("div", { className: "ledger-cell" },
+              React.createElement("div", { className: "ledger-num stamp" }, status ? status.total_calls : 0),
+              React.createElement("div", { className: "ledger-lbl" }, "Calls Settled")),
+            React.createElement("div", { className: "ledger-cell" },
+              React.createElement("div", { className: "ledger-num stamp" }, "$" + (status ? status.total_dripped : "0.000000")),
+              React.createElement("div", { className: "ledger-lbl" }, "Total Dripped"))
+          )
+        ),
 
-    toast && React.createElement("div",{className:`toast ${toast.type}`},toast.msg)
-  );
-}
+        React.createElement("div", { className: "layout" },
 
-ReactDOM.render(React.createElement(App),document.getElementById("root"));
-</script>
+          React.createElement("div", { className: "sidebar" },
+            React.createElement("div", { className: "sidebar-head" },
+              React.createElement("span", { className: "sidebar-title" }, "Conversations"),
+              React.createElement("button", { className: "new-chat-btn", onClick: startNewChat }, "+ New")
+            ),
+            chats.length === 0
+              ? React.createElement("div", { className: "sidebar-empty" }, "Your paid conversations will appear here.")
+              : React.createElement("div", { className: "chat-list" },
+                chats.map(c => React.createElement("button", {
+                  key: c.id,
+                  className: `chat-item${activeChat === c.id ? " active" : ""}`,
+                  onClick: () => openChat(c.id)
+                },
+                  React.createElement("div", { className: "chat-item-title" }, c.title),
+                  React.createElement("div", { className: "chat-item-meta" }, c.messageCount + " msgs · " + timeAgo(c.createdAt))
+                ))
+              )
+          ),
+
+          React.createElement("div", { className: "center" },
+            React.createElement("div", { className: "section-lbl" },
+              React.createElement("span", null, activeChat ? "Conversation" : "New Conversation"),
+              messages.length > 0 && React.createElement("span", null, messages.length + " messages")
+            ),
+
+            activeChat && React.createElement("div", { className: "spend-bar-block" },
+              React.createElement("div", { className: "spend-bar-top" },
+                React.createElement("span", { className: "spend-bar-label" },
+                  `Session spend: $${sessionSpent.toFixed(4)} of $${sessionLimit.toFixed(2)} limit`
+                ),
+                React.createElement("a", {
+                  className: "receipt-link",
+                  href: `/api/chats/${activeChat}/receipt`,
+                  target: "_blank",
+                  rel: "noopener"
+                }, "⬇ Download Receipt")
+              ),
+              React.createElement("div", { className: "spend-bar-track" },
+                React.createElement("div", {
+                  className: `spend-bar-fill${(sessionSpent / sessionLimit) > 0.85 ? " warn" : ""}`,
+                  style: { width: Math.min(100, (sessionSpent / sessionLimit) * 100) + "%" }
+                })
+              )
+            ),
+
+            React.createElement("div", { className: "conversation" },
+              messages.length === 0
+                ? React.createElement("div", { className: "conv-empty" }, "No messages yet. Ask a question above, each one settles a real payment on Arc before Gemini responds.")
+                : messages.map((m, i) =>
+                  m.role === "user"
+                    ? React.createElement("div", { className: "msg", key: i },
+                      React.createElement("div", { className: "msg-user" },
+                        React.createElement("span", { className: "msg-user-label" }, "You paid"),
+                        m.tier && React.createElement("span", { className: "msg-tier" }, TIER_LABELS[m.tier] || m.tier),
+                        React.createElement("span", { className: "msg-amount" }, m.amount || "")
+                      ),
+                      React.createElement("div", { className: "msg-user-text" }, m.content)
+                    )
+                    : React.createElement("div", { className: "msg-assistant", key: i }, m.content)
+                )
+            ),
+            React.createElement("div", { ref: convEndRef }),
+
+            React.createElement("div", { className: "info-card" },
+              React.createElement("strong", null, "How this works"),
+              React.createElement("p", null, "Every question triggers a full x402 cycle: the seller returns HTTP 402, the agent signs an EIP-3009 authorization offchain, Circle Gateway verifies and settles on Arc, then Drip answers. Follow-ups in this conversation get prior context but are still billed individually. Each conversation has its own spend limit, and every payment is logged with a Gateway settlement reference in the downloadable receipt.")
+            )
+          ),
+
+          React.createElement("div", { className: "right-col" },
+            React.createElement("div", { className: "wallet-block" },
+              React.createElement("div", { className: "section-lbl" }, "Wallets"),
+              React.createElement("div", { className: "wallet-row" },
+                React.createElement("span", { className: "wallet-role" }, "Buyer agent"),
+                React.createElement("span", { className: "wallet-addr" }, status ? shortAddr(status.agent_wallet) : "—")),
+              React.createElement("div", { className: "wallet-row" },
+                React.createElement("span", { className: "wallet-role" }, "Seller (Circle)"),
+                React.createElement("span", { className: "wallet-addr stamp" }, status ? shortAddr(status.seller_wallet) : "—"))
+            ),
+
+            React.createElement("div", null,
+              React.createElement("div", { className: "section-lbl" }, "Live Feed"),
+              React.createElement("div", { className: "feed-list" },
+                feed.length === 0
+                  ? React.createElement("div", { className: "feed-empty" }, "Payment activity will stream here as the agent works.")
+                  : feed.map(item => React.createElement("div", { className: "feed-item", key: item.id },
+                    React.createElement("div", { className: "feed-top" },
+                      React.createElement("span", { className: "feed-action" }, item.action),
+                    ),
+                    React.createElement("div", { className: "feed-top" },
+                      React.createElement("span", { className: "feed-meta" }, timeAgo(item.timestamp)),
+                      React.createElement("span", { className: `feed-stamp${item.status === "error" ? " error" : ""}` }, item.status === "error" ? "FAILED" : "PAID")
+                    )
+                  ))
+              )
+            )
+          )
+        ),
+
+        React.createElement("footer", null,
+          React.createElement("p", null, "Drip · Autonomous Nanopayments on Arc Testnet · Circle Gateway"),
+          React.createElement("a", { href: "https://github.com/Biobeng/Drip", target: "_blank" }, "github.com/Biobeng/Drip")
+        ),
+
+        toast && React.createElement("div", { className: `toast ${toast.type}` }, toast.msg)
+      );
+    }
+
+    ReactDOM.render(React.createElement(App), document.getElementById("root"));
+  </script>
 </body>
+
 </html>

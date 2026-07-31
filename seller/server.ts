@@ -74,12 +74,17 @@ type FeedEntry = {
   amount: string;
   status: "success" | "error";
   timestamp: string;
+  txHash?: string;
 };
 const feedLog: FeedEntry[] = [];
 let totalCalls = 0;
 let totalDripped = 0;
 let isRunning = false;
 
+// Note: txHash here is Circle Gateway's internal settlement reference UUID,
+// not a resolvable onchain transaction hash - it cannot be linked to a block
+// explorer directly. It is still a legitimate audit reference and is kept in
+// receipts, just not surfaced as a clickable "verify onchain" link in the UI.
 function pushFeed(entry: Omit<FeedEntry, "id" | "timestamp">) {
   feedLog.unshift({ id: Date.now() + Math.random(), timestamp: new Date().toISOString(), ...entry });
   if (feedLog.length > 40) feedLog.pop();
@@ -89,15 +94,33 @@ function pushFeed(entry: Omit<FeedEntry, "id" | "timestamp">) {
 // Each session is its own paid conversation. Every message sent within a
 // session is still its own $0.001 payment - sessions only group messages
 // for display and give Gemini prior turns as context.
-type ChatMessage = { role: "user" | "assistant"; content: string; timestamp: string; amount?: string; tier?: Tier };
-type ChatSession = { id: string; title: string; createdAt: string; messages: ChatMessage[] };
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  amount?: string;
+  tier?: Tier;
+  txHash?: string;
+};
+type ChatSession = {
+  id: string;
+  title: string;
+  createdAt: string;
+  messages: ChatMessage[];
+  spentTotal: number;
+};
+
+// ── Spend limit guardrail ─────────────────────────────────────────────────────
+// Each session has a hard budget cap. Once reached, the agent refuses to make
+// further paid calls in that session, regardless of remaining wallet balance.
+const SESSION_SPEND_LIMIT = parseFloat(process.env.SESSION_SPEND_LIMIT || "1.00");
 
 const sessions = new Map<string, ChatSession>();
 
 function getOrCreateSession(sessionId?: string): ChatSession {
   if (sessionId && sessions.has(sessionId)) return sessions.get(sessionId)!;
   const id = sessionId || randomUUID();
-  const session: ChatSession = { id, title: "New conversation", createdAt: new Date().toISOString(), messages: [] };
+  const session: ChatSession = { id, title: "New conversation", createdAt: new Date().toISOString(), messages: [], spentTotal: 0 };
   sessions.set(id, session);
   return session;
 }
@@ -233,6 +256,8 @@ app.get("/api/chats", (_req, res) => {
       messageCount: s.messages.length,
       createdAt: s.createdAt,
       lastMessage: s.messages[s.messages.length - 1]?.content?.slice(0, 80) || "",
+      spentTotal: s.spentTotal.toFixed(6),
+      spendLimit: SESSION_SPEND_LIMIT.toFixed(2),
     }))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   res.json({ chats: list });
@@ -242,13 +267,64 @@ app.get("/api/chats", (_req, res) => {
 app.get("/api/chats/:id", (req, res) => {
   const session = sessions.get(req.params.id);
   if (!session) return res.status(404).json({ error: "Chat not found" });
-  res.json(session);
+  res.json({ ...session, spendLimit: SESSION_SPEND_LIMIT.toFixed(2) });
 });
 
 // Start a brand new empty session and return its id
 app.post("/api/chats/new", (_req, res) => {
   const session = getOrCreateSession();
   res.json({ id: session.id });
+});
+
+// Downloadable plain-text receipt for a session - every message, its price,
+// timestamp, and onchain transaction reference where available. Ledger-style
+// formatting to match the product's own visual language.
+app.get("/api/chats/:id/receipt", (req, res) => {
+  const session = sessions.get(req.params.id);
+  if (!session) return res.status(404).json({ error: "Chat not found" });
+
+  const lines: string[] = [];
+  const divider = "-".repeat(56);
+
+  lines.push("DRIP RECEIPT");
+  lines.push(divider);
+  lines.push(`Session   : ${session.id}`);
+  lines.push(`Title     : ${session.title}`);
+  lines.push(`Created   : ${session.createdAt}`);
+  lines.push(`Network   : Arc Testnet (eip155:5042002)`);
+  lines.push(`Seller    : ${SELLER_ADDRESS} (Circle Dev Controlled Wallet)`);
+  lines.push(`Buyer     : ${agentAddress()}`);
+  lines.push(divider);
+  lines.push("");
+
+  let running = 0;
+  for (const m of session.messages) {
+    if (m.role === "user") {
+      running += m.amount ? parseFloat(m.amount.replace("$", "")) : 0;
+      lines.push(`[PAID ${m.amount || "$0.000"}]  ${m.tier ? TIERS[m.tier].label : ""}`);
+      lines.push(`  ${m.timestamp}`);
+      lines.push(`  "${m.content}"`);
+      if (m.txHash) {
+        lines.push(`  gateway ref: ${m.txHash}`);
+      }
+      lines.push("");
+    } else {
+      lines.push(`  -> ${m.content}`);
+      lines.push("");
+    }
+  }
+
+  lines.push(divider);
+  lines.push(`TOTAL PAID THIS SESSION : $${running.toFixed(6)} USDC`);
+  lines.push(`SESSION SPEND LIMIT     : $${SESSION_SPEND_LIMIT.toFixed(2)} USDC`);
+  lines.push(divider);
+  lines.push("Drip - Autonomous Nanopayments on Arc");
+  lines.push("github.com/Biobeng/Drip");
+
+  const text = lines.join("\n");
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="drip-receipt-${session.id.slice(0, 8)}.txt"`);
+  res.send(text);
 });
 
 // Trigger a paid agent call: pays via Gateway, sends the prompt (with prior
@@ -297,6 +373,24 @@ app.post("/api/agent/run", async (req, res) => {
 
     const route = TIERS[tier].route;
     const priceLabel = TIERS[tier].price;
+    const numericPrice = parseFloat(priceLabel.replace("$", ""));
+
+    // Spend limit guardrail: refuse to pay if this session has already hit
+    // its budget cap, regardless of how much USDC remains in the wallet.
+    if (session.spentTotal + numericPrice > SESSION_SPEND_LIMIT) {
+      isRunning = false;
+      pushFeed({
+        action: `Spend limit reached ($${SESSION_SPEND_LIMIT.toFixed(2)}) - call refused`,
+        endpoint: route,
+        amount: "blocked",
+        status: "error",
+      });
+      return res.status(429).json({
+        error: `Session spend limit of $${SESSION_SPEND_LIMIT.toFixed(2)} reached. Start a new conversation to continue.`,
+        spentTotal: session.spentTotal.toFixed(6),
+        spendLimit: SESSION_SPEND_LIMIT.toFixed(2),
+      });
+    }
 
     const { data, status } = await agentClient.pay(`${SELF_URL}${route}`, {
       method: "POST",
@@ -311,10 +405,11 @@ app.post("/api/agent/run", async (req, res) => {
     }
 
     const result = (data as any).result;
-    const numericPrice = parseFloat(priceLabel.replace("$", ""));
+    const txHash: string | undefined = (data as any)?.meta?.transaction || (data as any)?.transaction;
     const now = new Date().toISOString();
-    session.messages.push({ role: "user", content: prompt, timestamp: now, amount: priceLabel, tier });
+    session.messages.push({ role: "user", content: prompt, timestamp: now, amount: priceLabel, tier, txHash });
     session.messages.push({ role: "assistant", content: result, timestamp: now });
+    session.spentTotal += numericPrice;
 
     totalCalls++;
     totalDripped += numericPrice;
@@ -323,6 +418,7 @@ app.post("/api/agent/run", async (req, res) => {
       endpoint: route,
       amount: priceLabel + " USDC",
       status: "success",
+      txHash,
     });
 
     isRunning = false;
@@ -332,8 +428,11 @@ app.post("/api/agent/run", async (req, res) => {
       result,
       tier,
       price: priceLabel,
+      txHash,
       totalCalls,
       totalDripped: totalDripped.toFixed(6),
+      sessionSpent: session.spentTotal.toFixed(6),
+      sessionLimit: SESSION_SPEND_LIMIT.toFixed(2),
     });
   } catch (err: any) {
     isRunning = false;
@@ -405,7 +504,7 @@ app.post("/ai-query/longform", gateway.require(TIERS.longform.price), async (req
 });
 
 async function handleTieredQuery(tier: Tier, req: PaidRequest, res: express.Response) {
-  const { payer, amount, network } = req.payment!;
+  const { payer, amount, network, transaction } = req.payment!;
   const { prompt, history } = req.body;
   const formattedAmount = formatUnits(BigInt(amount), 6);
   console.log(`[DRIP] ${formattedAmount} USDC (${tier}) from ${payer} on ${network}`);
@@ -416,14 +515,16 @@ async function handleTieredQuery(tier: Tier, req: PaidRequest, res: express.Resp
     res.json({
       result,
       tier,
-      meta: { paid_by: payer, amount_usdc: formattedAmount, network, timestamp: new Date().toISOString() },
+      transaction,
+      meta: { paid_by: payer, amount_usdc: formattedAmount, network, transaction, timestamp: new Date().toISOString() },
     });
   } catch (err: any) {
     console.error("[GEMINI ERROR]", err.message);
     res.json({
       result: "Gemini API is temporarily unavailable, but your payment was settled successfully via Circle Gateway.",
       tier,
-      meta: { paid_by: payer, amount_usdc: formattedAmount, network, timestamp: new Date().toISOString(), error: err.message },
+      transaction,
+      meta: { paid_by: payer, amount_usdc: formattedAmount, network, transaction, timestamp: new Date().toISOString(), error: err.message },
     });
   }
 }
